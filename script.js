@@ -1,173 +1,200 @@
-let entities = [];
+let rainDrops = [];
+let fertilizer = [];
+let plants = [];
+let wolves = [];
+let sheeps = [];
+let seeds = [];
 
 function setup() {
-    createCanvas(windowWidth, windowHeight);
-    for (let i = 0; i < 10; i++) {
-        entities.push(new Entity(random(width), random(height), 'plant'));
-    }
-    for (let i = 0; i < 5; i++) {
-        entities.push(new Sheep(random(width), random(height)));
-    }
-    for (let i = 0; i < 3; i++) {
-        entities.push(new Wolf(random(width), random(height)));
-    }
+  createCanvas(windowWidth, windowHeight);
+
+  for (let i = 0; i < 10; i++) {
+    rainDrops.push(new RainDrop(random(width), random(height)));
+    fertilizer.push(new Fertilizer(random(width), random(height));
+    seeds.push(new Seed(random(width), random(height)));
+    plants.push(new Plant(random(width), random(height)));
+    wolves.push(new Wolf(/* TODO: define constructor params */));
+    sheeps.push(new Sheep(/* TODO: define constructor params */));
+  }
 }
 
 function draw() {
-    background(220);
-    for (let i = entities.length - 1; i >= 0; i--) {
-        entities[i].display();
-        entities[i].update();
-        if (entities[i].type === 'sheep' || entities[i].type === 'wolf') {
-            entities[i].commonReproduceBehavior(); // Call the common reproduction behavior
-            entities[i].commonEatBehavior(entities); // Call the common eat behavior
-        }
-        if (entities[i].isDead()) {
-            entities.splice(i, 1);
-        }
-    }
-}
-class Entity {
-    constructor(x, y, type) {
-        this.x = x;
-        this.y = y;
-        this.size = 10;
-        this.type = type;
-        this.energy = this.type === 'plant' ? 0 : 100; // Set initial energy
-        this.lastReproductionTime = millis();
-    }
+  background(220);
 
-    display() {
-        if (this.type === 'plant') {
-            fill(0, 255, 0); // Green for plants
-        } else if (this.type === 'sheep') {
-            fill(255, 255, 0); // Yellow for sheep
-        } else if (this.type === 'wolf') {
-            fill(128); // Gray for wolves
-        }
-        square(this.x, this.y, this.size);
+  // Update and display raindrops
+  for (let i = rainDrops.length - 1; i >= 0; i--) {
+    let rainDrop = rainDrops[i];
+    if (rainDrop.isOffScreen()) {
+      rainDrops.splice(i, 1);
+    }else{
+        rainDrop.updateAndDisplay();
     }
+  }
+  // Update and display fertilizer
+  for (let i = fertilizer.length - 1; i >= 0; i--) {
+    let f = fertilizer[i];
+    f.updateAndDisplay();
+  }
 
-    isDead() {
-        return this.energy <= 0;
+// Update and display seeds
+for (let i = seeds.length - 1; i >= 0; i--) {
+    let s = seeds[i];
+    s.updateAndDisplay();
+    
+    // Determine if a seed becomes a plant
+    if (s.canBecomePlant()) {
+      // Replace the seed with a new plant
+      plants.push(new Plant(s.x, s.y));
+      seeds.splice(i, 1);
     }
+  }
 
-    update() {
-        if (this.type !== 'plant') {
-            this.energy -= 0.1; // Energy is spent every frame
-        }
-    }
+  // Update and display plants
+  for (let i = plants.length - 1; i >= 0; i--) {
+    let p = plants[i];
+    p.updateAndDisplay();
 
-    moveTowards(target) {
-        let directionX = Math.sign(target.x - this.x);
-        let directionY = Math.sign(target.y - this.y);
-        let newX = this.x + directionX * this.size;
-        let newY = this.y + directionY * this.size;
-        if (newX >= 0 && newX <= width && newY >= 0 && newY <= height) {
-            this.x = newX;
-            this.y = newY;
-        }
-    }
+    // Allow plants to absorb water and fertilizer
+    p.absorbWater();
+    p.absorbFertilizer();
 
-    commonEatBehavior(target) {
-        if (this.canEat(target)) {
-            this.gainEnergy(target);
-            this.onEat(target);
-        }
+    // Determine if the plant has died
+    if (p.isDead()) {
+      // Replace the plant with fertilizer
+      fertilizer.push(new Fertilizer(p.x, p.y, p.mass));
+      plants.splice(i, 1);
     }
-
-    commonReproduceBehavior() {
-        if (millis() - this.lastReproductionTime >= this.reproduceDelay) {
-            for (let entity of entities) {
-                if (entity.type === this.type && entity !== this && this.canReproduce(entity)) {
-                    this.createOffspring(entity);
-                    this.lastReproductionTime = millis();
-                }
-            }
-        }
-    }
-
-    canEat(target) {
-        return false; // Override in specific entity classes
-    }
-
-    canReproduce(entity) {
-        return false; // Override in specific entity classes
-    }
-
-    gainEnergy(target) {
-        this.energy += target.getEnergyValue();
-    }
-
-    createOffspring(entity) {
-        // Override in specific entity classes
-    }
-
-    onEat(target) {
-        // Override in specific entity classes
-    }
-
-    getEnergyValue() {
-        return 0; // Override in specific entity classes
-    }
+  }
 }
 
-class Sheep extends Entity {
+class Seed {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.size = 10;
+    this.color = color(255, 255, 0); // Yellow color
+  }
+
+  updateAndDisplay() {
+    // Display the seed
+    fill(this.color);
+    ellipse(this.x, this.y, this.size);
+  }
+
+  canBecomePlant() {
+    // Check if there is water and fertilizer nearby
+    // Implement the probability condition here
+  }
+}
+
+class Plant {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.size = 20;
+    this.color = color(0, 255, 0); // Green color
+    this.water = 1; // Initialize water supply
+    this.mass = 1; // Initialize mass
+  }
+
+  updateAndDisplay() {
+    // Display the plant
+    fill(this.color);
+    ellipse(this.x, this.y, this.size);
+  }
+
+  absorbWater() {
+    // Implement water absorption from nearby raindrops
+    // Remove absorbed water drops from the canvas
+  }
+
+  absorbFertilizer() {
+    // Implement fertilizer absorption from nearby fertilizer
+    // Convert absorbed fertilizer into mass
+  }
+
+  isDead() {
+    // Check if the plant has died due to lack of water
+  }
+}
+
+class Fertilizer {
+  // Fertilizer class definition here...
+}
+
+class RainDrop {
     constructor(x, y) {
-        super(x, y, 'sheep');
-        this.reproduceDelay = random(5000, 10000); // Delay between reproductions (5-10 seconds)
+      this.x = x;
+      this.y = y;
+      this.size = 10;
+      this.color = color(0, 0, 255); // Blue color
     }
+  
+    updateAndDisplay() {
+      // Move raindrop down the canvas
+      this.y += 5; // Adjust the speed as needed
+  
+      // Display the raindrop
+      fill(this.color);
+      rect(this.x, this.y, this.size, this.size);
+    }
+  
+    isOffScreen() {
+      return this.y > height;
+    }
+  }
+  class Fertilizer {
+    constructor(x, y, mass) {
+      this.x = x;
+      this.y = y;
+      this.size = 10;
+      this.color = color(139, 69, 19); // Brown color
+      this.mass = mass || 1; // Default mass is 1
+    }
+  
+    updateAndDisplay() {
+      // Display the fertilizer
+      fill(this.color);
+      rect(this.x, this.y, this.size, this.size);
+    }
+  }
+  
+class Plant {
+  constructor(/* TODO: Define constructor params */) {
+    // Initialize attributes
+  }
 
-    canEat(target) {
-        return this.type === 'sheep' && target.type === 'plant' && dist(this.x, this.y, target.x, target.y) < this.size / 2;
-    }
-
-    getEnergyValue() {
-        return 50;
-    }
-
-    createOffspring(entity) {
-        entities.push(new Sheep(this.x, this.y));
-    }
+  updateAndDisplay() {
+    // Implement the update and display logic for plants
+  }
 }
 
-class Wolf extends Entity {
-    constructor(x, y) {
-        super(x, y, 'wolf');
-        this.reproduceDelay = random(3000, 5000); // Delay between reproductions (3-5 seconds)
-    }
+class Wolf {
+  constructor(/* TODO: Define constructor params */) {
+    // Initialize attributes
+  }
 
-    canEat(target) {
-        return this.type === 'wolf' && target.type === 'sheep' && dist(this.x, this.y, target.x, target.y) < this.size;
-    }
+  updateAndDisplay() {
+    // Implement the update and display logic for wolves
+  }
+}
 
-    getEnergyValue() {
-        return 100;
-    }
+class Sheep {
+  constructor(/* TODO: Define constructor params */) {
+    // Initialize attributes
+  }
 
-    createOffspring(entity) {
-        entities.push(new Wolf(this.x, this.y));
-    }
+  updateAndDisplay() {
+    // Implement the update and display logic for sheeps
+  }
+}
 
-    move() {
-        let targetSheep = this.findNearestSheep();
-        if (targetSheep) {
-            this.moveTowards(targetSheep);
-        }
-    }
+class Seed {
+  constructor(/* TODO: Define constructor params */) {
+    // Initialize attributes
+  }
 
-    findNearestSheep() {
-        let closestSheep = null;
-        let closestDistance = Infinity;
-        for (let entity of entities) {
-            if (entity.type === 'sheep') {
-                let d = dist(this.x, this.y, entity.x, entity.y);
-                if (d < closestDistance) {
-                    closestDistance = d;
-                    closestSheep = entity;
-                }
-            }
-        }
-        return closestSheep;
-    }
+  updateAndDisplay() {
+    // Implement the update and display logic for seeds
+  }
 }
