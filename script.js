@@ -36,7 +36,6 @@ function draw() {
   }
 
   rainDrops.forEach(rainDrop => {
-    console.log(rainDrop);
     rainDrop.updateAndDisplay();
   });
 
@@ -74,6 +73,37 @@ class Seed {
     noStroke();
     fill(this.color);
     ellipse(this.x, this.y, this.size);
+
+    let nearestFertilizerDist = Infinity;
+    let nearestWaterDist = Infinity;
+
+    for (let fertilizer of fertilizers) {
+      const d = dist(this.x, this.y, fertilizer.x, fertilizer.y);
+      if (d < nearestFertilizerDist) {
+        nearestFertilizerDist = d;
+      }
+    }
+
+    for (let drop of rainDrops) {
+      const d = dist(this.x, this.y, drop.x, drop.y);
+      if (d < nearestWaterDist) {
+        nearestWaterDist = d;
+      }
+    }
+
+    const maxGerminationDistance = 100;
+    const fertilizerFactor = map(nearestFertilizerDist, 0, maxGerminationDistance, 1, 0);
+    const waterFactor = map(nearestWaterDist, 0, maxGerminationDistance, 1, 0);
+
+    const germinationProbability = (fertilizerFactor + waterFactor) / 2;
+
+    if (random(1) < germinationProbability) {
+      plants.push(new Plant(this.x, this.y));
+      const seedIndex = seeds.indexOf(this);
+      if (seedIndex !== -1) {
+        seeds.splice(seedIndex, 1);
+      }
+    }
   }
 }
 
@@ -83,13 +113,23 @@ class Plant {
     this.y = y;
     this.size = 20;
     this.color = color(0, 255, 0);
+    this.seedProbability = 0.05;
     this.updateAndDisplay = this.updateAndDisplay.bind(this);
+  }
+
+  spawnSeed() {
+    if (random(1) < this.seedProbability) {
+      const seedX = this.x + random(-20, 20);
+      const seedY = this.y + random(-20, 20);
+      seeds.push(new Seed(seedX, seedY));
+    }
   }
 
   updateAndDisplay() {
     noStroke();
     fill(this.color);
     ellipse(this.x, this.y, this.size);
+    this.spawnSeed();
   }
 }
 
