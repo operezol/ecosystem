@@ -103,6 +103,12 @@ class Seed {
       if (seedIndex !== -1) {
         seeds.splice(seedIndex, 1);
       }
+    } else {
+      fertilizers.push(new Fertilizer(this.x, this.y, this.size));
+      const seedIndex = seeds.indexOf(this);
+      if (seedIndex !== -1) {
+        seeds.splice(seedIndex, 1);
+      }
     }
   }
 }
@@ -113,18 +119,45 @@ class Plant {
     this.y = y;
     this.size = 20;
     this.color = color(0, 255, 0);
-    this.seedProbability = 0.05;
     this.updateAndDisplay = this.updateAndDisplay.bind(this);
   }
 
-  spawnSeed() {
-    if (random(1) < this.seedProbability) {
+  spawnSeed(waterDrops, fertilizers) {
+    const maxDistance = 50;
+    let nearestWaterDist = Infinity;
+    let nearestFertilizerDist = Infinity;
+  
+    for (let drop of waterDrops) {
+      const d = dist(this.x, this.y, drop.x, drop.y);
+      if (d < nearestWaterDist) {
+        nearestWaterDist = d;
+      }
+    }
+  
+    for (let fertilizer of fertilizers) {
+      const d = dist(this.x, this.y, fertilizer.x, fertilizer.y);
+      if (d < nearestFertilizerDist) {
+        nearestFertilizerDist = d;
+      }
+    }
+  
+    const waterInfluence = map(nearestWaterDist, 0, maxDistance, 1, 0);
+  
+    const fertilizerInfluence = map(nearestFertilizerDist, 0, maxDistance, 1, 0);
+  
+    const totalInfluence = (waterInfluence + fertilizerInfluence) / 2;
+  
+    let seedProbability = totalInfluence;
+  
+    if (random(1) < seedProbability) {
+      const seedSize = random(5, 15);
+      this.size -= seedSize;
       const seedX = this.x + random(-20, 20);
       const seedY = this.y + random(-20, 20);
-      seeds.push(new Seed(seedX, seedY));
+      seeds.push(new Seed(seedX, seedY, seedSize));
     }
   }
-
+  
   updateAndDisplay() {
     noStroke();
     fill(this.color);
